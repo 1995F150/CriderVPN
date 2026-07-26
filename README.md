@@ -19,10 +19,34 @@ The gateway will eventually support:
 - NetworkManager and systemd integration
 - Configuration backup, validation, and rollback
 - A Supabase-backed control plane without storing VPN private keys in Supabase
+- Automatic fast-forward-only updates from GitHub
+
+## Automatic updates
+
+The foundation installer configures `cridervpn-update.timer` to check GitHub about every 30 minutes.
+
+The default mode is `apply`. It updates the managed repository at `/opt/cridervpn/repository` only when `main` can be advanced with a clean fast-forward. It then refreshes the updater's own files. It never automatically runs gateway installers, firewall migrations or network activation scripts.
+
+Update state is written to:
+
+```text
+/var/lib/cridervpn/update/status.env
+```
+
+Useful commands:
+
+```bash
+systemctl status cridervpn-update.timer
+sudo systemctl start cridervpn-update.service
+sudo journalctl -u cridervpn-update.service
+sudo cat /var/lib/cridervpn/update/status.env
+```
+
+Set `UPDATE_MODE="check"` in `/etc/cridervpn/update.env` to detect updates without downloading them.
 
 ## Safety status
 
-This repository is in the foundation stage. Nothing in the initial commit changes live network settings. Do not run installation scripts on a remote server until the detected interfaces and rollback path have been reviewed.
+This repository is in the foundation stage. Nothing in the initial commit changes live network settings. Do not run network activation scripts on a remote server until the detected interfaces and rollback path have been reviewed.
 
 ## Security rules
 
@@ -41,7 +65,8 @@ Use the example configuration as a template and store the real configuration on 
 
 1. Run `scripts/discover-network.sh` on the Ubuntu server.
 2. Review the generated report before applying changes.
-3. Copy `config/cridervpn.env.example` to `/etc/cridervpn/cridervpn.env` and set the confirmed interfaces.
-4. Use the guarded installer only after the configuration passes validation.
+3. Run `sudo bash scripts/install-foundation.sh` to install backups, configuration and the safe updater.
+4. Edit `/etc/cridervpn/cridervpn.env` using the confirmed interfaces.
+5. Validate the configuration before any network activation.
 
 CriderVPN is not yet ready for production or customer traffic.
