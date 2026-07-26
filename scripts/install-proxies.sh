@@ -70,7 +70,10 @@ render() {
 render "${repo_root}/templates/squid.conf.template" /etc/squid/squid.conf
 render "${repo_root}/templates/danted.conf.template" /etc/danted.conf
 squid -k parse
-systemctl enable --now squid danted
+systemctl enable squid danted
+# Package installation may have already started the daemons with default configs.
+# Restart explicitly so the restricted CriderVPN listeners and ACLs take effect.
+systemctl restart squid danted
 
 if [[ "${REVERSE_PROXY_ENABLED}" == "true" ]]; then
   render "${repo_root}/templates/nginx-reverse-proxy.conf.template" /etc/nginx/sites-available/cridervpn
