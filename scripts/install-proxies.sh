@@ -46,28 +46,37 @@ done
 
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
-apt-get install -y squid dante-server nginx
+apt-get install -y squid dante-server
+if [[ "${REVERSE_PROXY_ENABLED}" == "true" ]]; then
+  apt-get install -y nginx
+fi
 
 render() {
   local source_file="$1" target_file="$2"
-  sed     -e "s|__LAN_IP__|${LAN_IPV4_GATEWAY}|g"     -e "s|__TAILSCALE_IP__|${tailscale_ip}|g"     -e "s|__UPLINK_INTERFACE__|${UPLINK_INTERFACE}|g"     -e "s|__LAN_SOURCE_CIDR__|${LAN_SOURCE_CIDR}|g"     -e "s|__TAILSCALE_SOURCE_CIDR__|${TAILSCALE_SOURCE_CIDR}|g"     -e "s|__SOCKS5_PORT__|${SOCKS5_PORT}|g"     -e "s|__HTTP_PROXY_PORT__|${HTTP_PROXY_PORT}|g"     -e "s|__REVERSE_PROXY_LISTEN_PORT__|${REVERSE_PROXY_LISTEN_PORT}|g"     -e "s|__REVERSE_PROXY_SERVER_NAME__|${REVERSE_PROXY_SERVER_NAME}|g"     -e "s|__REVERSE_PROXY_BACKEND__|${REVERSE_PROXY_BACKEND}|g"     "${source_file}" > "${target_file}"
+  sed \
+    -e "s|__LAN_IP__|${LAN_IPV4_GATEWAY}|g" \
+    -e "s|__TAILSCALE_IP__|${tailscale_ip}|g" \
+    -e "s|__UPLINK_INTERFACE__|${UPLINK_INTERFACE}|g" \
+    -e "s|__LAN_SOURCE_CIDR__|${LAN_SOURCE_CIDR}|g" \
+    -e "s|__TAILSCALE_SOURCE_CIDR__|${TAILSCALE_SOURCE_CIDR}|g" \
+    -e "s|__SOCKS5_PORT__|${SOCKS5_PORT}|g" \
+    -e "s|__HTTP_PROXY_PORT__|${HTTP_PROXY_PORT}|g" \
+    -e "s|__REVERSE_PROXY_LISTEN_PORT__|${REVERSE_PROXY_LISTEN_PORT}|g" \
+    -e "s|__REVERSE_PROXY_SERVER_NAME__|${REVERSE_PROXY_SERVER_NAME}|g" \
+    -e "s|__REVERSE_PROXY_BACKEND__|${REVERSE_PROXY_BACKEND}|g" \
+    "${source_file}" > "${target_file}"
 }
 
 render "${repo_root}/templates/squid.conf.template" /etc/squid/squid.conf
 render "${repo_root}/templates/danted.conf.template" /etc/danted.conf
-render "${repo_root}/templates/nginx-reverse-proxy.conf.template" /etc/nginx/sites-available/cridervpn
-
 squid -k parse
-danted -V >/dev/null 2>&1 || true
-nginx -t
-
 systemctl enable --now squid danted
+
 if [[ "${REVERSE_PROXY_ENABLED}" == "true" ]]; then
+  render "${repo_root}/templates/nginx-reverse-proxy.conf.template" /etc/nginx/sites-available/cridervpn
   ln -sfn /etc/nginx/sites-available/cridervpn /etc/nginx/sites-enabled/cridervpn
+  nginx -t
   systemctl enable --now nginx
-else
-  rm -f /etc/nginx/sites-enabled/cridervpn
-  systemctl reload nginx 2>/dev/null || true
 fi
 
 echo "SOCKS5: ${LAN_IPV4_GATEWAY}:${SOCKS5_PORT} and ${tailscale_ip}:${SOCKS5_PORT}"
