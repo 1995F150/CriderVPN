@@ -1,0 +1,17 @@
+[Unit]
+Description=Capture CriderVPN network discovery report
+After=NetworkManager-wait-online.service
+Wants=NetworkManager-wait-online.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/cridervpn/scripts/discover-network.sh /var/lib/cridervpn/reports
+User=root
+Group=root
+ProtectSystem=strict
+ReadWritePaths=/var/lib/cridervpn
+PrivateTmp=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
