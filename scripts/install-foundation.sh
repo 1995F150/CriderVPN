@@ -24,9 +24,9 @@ done
 
 install -d -m 0755 "${install_root}/scripts"
 install -d -m 0700 "${config_root}" "${state_root}" "${backup_root}"
-install -m 0755 "${repo_root}/scripts/discover-network.sh" "${install_root}/scripts/"
-install -m 0755 "${repo_root}/scripts/validate-config.sh" "${install_root}/scripts/"
-install -m 0755 "${repo_root}/scripts/check-for-updates.sh" "${install_root}/scripts/"
+for script_name in discover-network.sh validate-config.sh check-for-updates.sh enable-tailscale-routing.sh disable-tailscale-routing.sh tailscale-routing-status.sh; do
+  install -m 0755 "${repo_root}/scripts/${script_name}" "${install_root}/scripts/"
+done
 install -m 0644 "${repo_root}/systemd/cridervpn-update.service" /etc/systemd/system/
 install -m 0644 "${repo_root}/systemd/cridervpn-update.timer" /etc/systemd/system/
 
