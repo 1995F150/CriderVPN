@@ -19,14 +19,20 @@ router.post('/setup', async (req, res) => {
   });
 });
 
-router.post('/auth/login', (req, res) => {
+router.post('/login', (req, res) => {
   const { username, password } = req.body;
   userDb.get('SELECT * FROM users WHERE username = ?', [username], async (err, user) => {
     if (err || !user) return res.status(401).json({ error: 'Invalid credentials' });
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ error: 'Invalid credentials' });
     const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '24h' });
-    res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict', path: '/' });
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: req.secure,
+      sameSite: 'strict',
+      path: '/',
+      maxAge: 24 * 60 * 60 * 1000
+    });
     res.json({ success: true });
   });
 });
