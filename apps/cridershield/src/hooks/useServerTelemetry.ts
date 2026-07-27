@@ -5,7 +5,7 @@ export const useServerTelemetry = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const eventSource = new EventSource('http://localhost:3000/api/v1/telemetry/stream');
+    const eventSource = new EventSource('/api/v1/telemetry/stream');
 
     eventSource.onmessage = (event) => {
       try {
