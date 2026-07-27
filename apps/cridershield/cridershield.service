@@ -1,16 +1,27 @@
 [Unit]
-Description=CriderShield Network Engine
-After=network.target
+Description=CriderVPN CriderShield Dashboard
+After=network-online.target
+Wants=network-online.target
 
 [Service]
 Type=simple
-User=root
-WorkingDirectory=/opt/cridergpt-engine/CriderShield
+User=cridervpn
+Group=cridervpn
+WorkingDirectory=/opt/cridervpn/apps/cridershield
 ExecStart=/usr/bin/env npm start
 Restart=on-failure
+RestartSec=5
 Environment=NODE_ENV=production
-Environment=PORT=80
-Environment=DNS_PORT=53
+Environment=PORT=3000
+Environment=DNS_ENABLED=false
+Environment=SCANNER_ENABLED=true
+Environment=CRIDER_DATA_DIR=/var/lib/cridervpn/cridershield
+EnvironmentFile=-/etc/cridervpn/cridershield.env
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/cridervpn/cridershield
 
 [Install]
 WantedBy=multi-user.target
