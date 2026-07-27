@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Activity, Camera, Container, Gamepad2, Globe2, Heart, Laptop, Lock,
   Monitor, Network, Printer, RefreshCw, Router, Search, Server, Share2,
-  Smartphone, Star, Tablet, Tv, Wifi
+  ShieldCheck, ShieldOff, Smartphone, Star, Tablet, Tv, Wifi
 } from 'lucide-react';
 
 type Device = {
@@ -23,6 +23,7 @@ type Device = {
   role?: string;
   confidence?: number;
   favorite?: boolean;
+  internet_blocked?: boolean;
   dns_queries?: number;
   blocked_queries?: number;
   bytes_up?: number | null;
@@ -100,6 +101,7 @@ export default function ClientsPage() {
   const [editing, setEditing] = useState<Device | null>(null);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState('');
+  const [accessChanging, setAccessChanging] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -154,6 +156,32 @@ export default function ClientsPage() {
       body: JSON.stringify({ ...device, ...patch })
     });
     await load();
+  };
+
+  const toggleInternetAccess = async (device: Device) => {
+    const nextBlocked = !device.internet_blocked;
+    const action = nextBlocked ? 'block internet access for' : 'restore internet access for';
+    if (!window.confirm(`Are you sure you want to ${action} ${displayName(device)} (${device.ip_address})?`)) return;
+
+    setAccessChanging(device.mac_address);
+    setError('');
+    try {
+      const response = await fetch(
+        `/api/v1/devices/${encodeURIComponent(device.mac_address)}/internet-access`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ blocked: nextBlocked })
+        }
+      );
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || 'Unable to update internet access');
+      await load();
+    } catch (accessError: any) {
+      setError(accessError.message || 'Unable to update internet access');
+    } finally {
+      setAccessChanging(null);
+    }
   };
 
   const saveName = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -315,9 +343,29 @@ export default function ClientsPage() {
                     {Math.round(device.confidence || 0)}% confidence
                   </span>
                 </div>
-                <button onClick={() => setEditing(device)} className="text-sm font-medium text-blue-400 hover:text-blue-300">
-                  Rename & manage
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  {!['Gateway Router', 'VPN Gateway', 'Shared LAN'].includes(device.role || '') && device.ip_address && (
+                    <button
+                      onClick={() => toggleInternetAccess(device)}
+                      disabled={accessChanging === device.mac_address}
+                      className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium disabled:opacity-60 ${
+                        device.internet_blocked
+                          ? 'border-emerald-700 text-emerald-300 hover:bg-emerald-950/40'
+                          : 'border-red-800 text-red-300 hover:bg-red-950/40'
+                      }`}
+                    >
+                      {device.internet_blocked
+                        ? <ShieldCheck className="h-4 w-4" />
+                        : <ShieldOff className="h-4 w-4" />}
+                      {accessChanging === device.mac_address
+                        ? 'Applying…'
+                        : device.internet_blocked ? 'Restore internet' : 'Block internet'}
+                    </button>
+                  )}
+                  <button onClick={() => setEditing(device)} className="text-sm font-medium text-blue-400 hover:text-blue-300">
+                    Rename & manage
+                  </button>
+                </div>
               </div>
 
               <div className="mt-3 text-xs text-slate-500">
