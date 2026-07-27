@@ -1,5 +1,6 @@
 import './globals.css';
 import React from 'react';
+import AppShell from '@/components/AppShell';
 
 export const metadata = {
   title: 'CriderShield',
@@ -9,8 +10,8 @@ export const metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
-        {children}
+      <body>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );
