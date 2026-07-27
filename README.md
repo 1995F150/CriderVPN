@@ -89,7 +89,7 @@ sudo bash /opt/cridervpn/scripts/tailscale-routing-status.sh
 
 ## Automatic updates
 
-`cridervpn-update.timer` checks GitHub about every 30 minutes. It updates the
+`cridervpn-update.timer` checks GitHub every minute. It updates the
 managed repository at `/opt/cridervpn/repository` only with a clean
 fast-forward. If CriderShield is already installed and
 `AUTO_RESTART_CRIDERSHIELD="true"`, it deploys each new repository commit,
