@@ -11,6 +11,7 @@ const devicesRoutes = require('./routes/devices');
 const rulesRoutes = require('./routes/rules');
 const scanner = require('./services/scanner');
 const systemRoutes = require('./routes/system');
+const accessControl = require('./services/accessControl');
 
 const dev = process.env.NODE_ENV !== 'production';
 const nextApp = next({ dev });
@@ -49,6 +50,7 @@ nextApp.prepare().then(() => {
 
   app.listen(PORT, () => {
     console.log(`CriderShield running on port ${PORT}`);
+    accessControl.restoreBlockedDevices();
 
     if (process.env.SCANNER_ENABLED !== 'false') {
       scanner.startScanner();
