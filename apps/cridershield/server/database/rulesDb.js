@@ -2,7 +2,7 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
 
-const dataDir = path.join(__dirname, '../../data');
+const dataDir = process.env.CRIDER_DATA_DIR || path.join(__dirname, '../../data');
 fs.mkdirSync(dataDir, { recursive: true });
 
 const dbPath = path.join(dataDir, 'rules.db');
