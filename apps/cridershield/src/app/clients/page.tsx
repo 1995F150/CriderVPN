@@ -5,6 +5,7 @@ import { Monitor, Smartphone, Server } from 'lucide-react';
 export default function ClientsPage() {
   const [devices, setDevices] = useState([]);
   const [search, setSearch] = useState('');
+  const [editing, setEditing] = useState<any | null>(null);
 
   useEffect(() => {
     const fetchDevices = async () => {
@@ -22,6 +23,21 @@ export default function ClientsPage() {
     d.ip_address?.includes(search) || d.mac_address?.includes(search) || d.friendly_name?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const saveName = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    await fetch(`/api/v1/devices/${encodeURIComponent(editing.mac_address)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...editing,
+        friendly_name: formData.get('friendly_name')
+      })
+    });
+    setEditing(null);
+    window.location.reload();
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -38,6 +54,7 @@ export default function ClientsPage() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">IP Address</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">MAC Address</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Manage</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -50,11 +67,19 @@ export default function ClientsPage() {
                 <td className="px-6 py-4 text-sm text-gray-500">{d.ip_address}</td>
                 <td className="px-6 py-4 text-sm text-gray-500">{d.mac_address}</td>
                 <td className={`px-6 py-4 text-sm font-bold ${d.status === 'Online' ? 'text-green-500' : 'text-gray-400'}`}>{d.status}</td>
+                <td className="px-6 py-4 text-right"><button onClick={() => setEditing(d)} className="text-sm text-blue-400">Rename</button></td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+      {editing && (
+        <form onSubmit={saveName} className="flex max-w-xl gap-3 rounded-xl border border-slate-700 bg-slate-900 p-4">
+          <input name="friendly_name" defaultValue={editing.friendly_name || editing.hostname || ''} required className="min-w-0 flex-1 rounded border border-slate-700 bg-slate-950 p-2" aria-label="Friendly device name" />
+          <button className="rounded bg-blue-600 px-4 py-2">Save name</button>
+          <button type="button" onClick={() => setEditing(null)} className="rounded border border-slate-700 px-4 py-2">Cancel</button>
+        </form>
+      )}
     </div>
   );
 }
