@@ -4,7 +4,7 @@ export const useNetworkStats = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await fetch('http://localhost:3000/api/v1/health');
+        const res = await fetch('/api/v1/status');
         const data = await res.json();
         setStats(data);
       } catch (e) { console.error("Failed to fetch stats", e); }
