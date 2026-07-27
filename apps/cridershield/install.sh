@@ -44,6 +44,9 @@ if ! id cridervpn >/dev/null 2>&1; then
 fi
 
 install -d -o cridervpn -g cridervpn -m 0755 "${data_parent}"
+install -d -o root -g root -m 0750 "${data_parent}/update/npm-cache"
+export NPM_CONFIG_CACHE="${data_parent}/update/npm-cache"
+export NPM_CONFIG_UPDATE_NOTIFIER=false
 install -d -o cridervpn -g cridervpn -m 0750 "${data_root}"
 install -d -m 0755 "${install_parent}" "${config_root}" /usr/local/sbin /etc/sudoers.d
 
