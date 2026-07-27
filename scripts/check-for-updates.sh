@@ -80,6 +80,7 @@ if [[ "${current_commit}" != "${available_commit}" ]]; then
     install -m 0644 "${REPOSITORY_DIR}/systemd/cridervpn-update.service" /etc/systemd/system/cridervpn-update.service
     install -m 0644 "${REPOSITORY_DIR}/systemd/cridervpn-update.timer" /etc/systemd/system/cridervpn-update.timer
     systemctl daemon-reload
+    systemctl restart --no-block cridervpn-update.timer
   fi
 fi
 
