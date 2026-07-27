@@ -2,6 +2,26 @@
 
 > A modern, self-hosted network management platform built for home labs, businesses, and power users.
 
+## CriderVPN integration
+
+This copy is maintained inside CriderVPN. It runs as the unprivileged
+`cridervpn` service account on port `3000`, stores its SQLite databases in
+`/var/lib/cridervpn/cridershield`, and requires an installation-generated
+JWT secret.
+
+The embedded DNS listener is disabled by default because the CriderVPN
+server already uses Pi-hole/dnsmasq on port 53. The existing Pi-hole web
+service also keeps ports 80 and 443.
+
+Install from the CriderVPN repository root:
+
+```bash
+sudo bash scripts/install-cridershield.sh
+```
+
+Then visit `http://<server-tailscale-ip>:3000/setup` through Tailscale.
+Find the server address with `tailscale ip -4`.
+
 CriderShield is an all-in-one network management solution inspired by projects like Pi-hole, UniFi, pfSense, and Home Assistant. It provides DNS filtering, network monitoring, device management, secure remote access, and system administration through a modern web dashboard.
 
 ---
