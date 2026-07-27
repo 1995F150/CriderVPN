@@ -1,21 +1,16 @@
-#!/bin/bash
-# CriderShield Updater
+#!/usr/bin/env bash
+set -Eeuo pipefail
 
-if [ "$EUID" -ne 0 ]; then
-  echo "Please run as root (sudo ./update.sh)"
+if [[ "${EUID}" -ne 0 ]]; then
+  echo "Run this updater with sudo." >&2
   exit 1
 fi
 
-echo "--> Pulling latest changes from GitHub..."
-git pull origin main
+repo_root="/opt/cridervpn/repository"
+[[ -d "${repo_root}/.git" ]] || {
+  echo "Managed CriderVPN repository not found at ${repo_root}." >&2
+  exit 1
+}
 
-echo "--> Updating Node.js dependencies..."
-npm install
-
-echo "--> Rebuilding the frontend..."
-npm run build
-
-echo "--> Restarting CriderShield service..."
-systemctl restart cridershield
-
-echo "--> Update complete!"
+git -C "${repo_root}" pull --ff-only
+exec bash "${repo_root}/scripts/install-cridershield.sh"
