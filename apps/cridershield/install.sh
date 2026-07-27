@@ -1,69 +1,54 @@
-#!/bin/bash
-# CriderShield Installer for Ubuntu Server
-set -e
+#!/usr/bin/env bash
+set -Eeuo pipefail
 
-if [ "$EUID" -ne 0 ]; then
-  echo "Please run as root (sudo ./install.sh)"
+if [[ "${EUID}" -ne 0 ]]; then
+  echo "Run this installer with sudo." >&2
   exit 1
 fi
 
-if [ ! -f "package.json" ]; then
-  echo "Error: package.json not found! Please ensure you are in the CriderShield root directory."
+source_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+install_root="/opt/cridervpn/apps/cridershield"
+data_root="/var/lib/cridervpn/cridershield"
+config_root="/etc/cridervpn"
+
+command -v npm >/dev/null || {
+  echo "npm is required before installing CriderShield." >&2
+  exit 1
+}
+
+node_major="$(node -p 'process.versions.node.split(".")[0]')"
+node_minor="$(node -p 'process.versions.node.split(".")[1]')"
+if (( node_major < 20 || (node_major == 20 && node_minor < 17) )); then
+  echo "Node.js 20.17 or newer is required." >&2
   exit 1
 fi
 
-echo "--> Installing Node.js dependencies..."
-npm install
+if ! id cridervpn >/dev/null 2>&1; then
+  useradd --system --home-dir /var/lib/cridervpn --shell /usr/sbin/nologin cridervpn
+fi
 
-echo "--> Building the Next.js frontend..."
+install -d -o cridervpn -g cridervpn -m 0750 "${data_root}"
+install -d -m 0755 "$(dirname -- "${install_root}")" "${config_root}"
+
+if [[ "${source_root}" != "${install_root}" ]]; then
+  rm -rf -- "${install_root}"
+  cp -a -- "${source_root}" "${install_root}"
+fi
+
+cd "${install_root}"
+npm ci
 npm run build
+chown -R root:root "${install_root}"
 
-echo "--> Configuring SQLite data directory..."
-mkdir -p data
-chmod 755 data#!/bin/bash
-set -e
-# CriderShield Installer for Ubuntu Server
-
-if [ "$EUID" -ne 0 ]; then
-  echo "Please run as root (sudo ./install.sh)"
-  exit 1
+if [[ ! -e "${config_root}/cridershield.env" ]]; then
+  jwt_secret="$(openssl rand -hex 32)"
+  install -m 0600 /dev/null "${config_root}/cridershield.env"
+  printf 'JWT_SECRET=%s\n' "${jwt_secret}" > "${config_root}/cridershield.env"
 fi
 
-if [ ! -f "package.json" ]; then
-  echo "Error: package.json not found! Please ensure you are in the CriderShield root directory."
-  exit 1
-fi
-
-echo "--> Installing Node.js dependencies..."
-npm install
-
-echo "--> Building the Next.js frontend..."
-npm run build
-
-echo "--> Configuring SQLite data directory..."
-mkdir -p data
-chmod 755 data
-
-echo "--> Installing systemd service..."
-cp cridershield.service /etc/systemd/system/cridershield.service
-
-echo "--> Reloading systemd and enabling CriderShield service..."
+install -m 0644 "${install_root}/cridershield.service" /etc/systemd/system/cridershield.service
 systemctl daemon-reload
-systemctl enable cridershield
+systemctl enable --now cridershield.service
 
-echo "--> Starting CriderShield..."
-systemctl start cridershield
-
-echo "--> CriderShield installed successfully! Access the dashboard at http://your-ip:3000"
-
-
-echo "--> Installing systemd service..."
-cp cridershield.service /etc/systemd/system/cridershield.service
-
-echo "--> Reloading systemd, enabling, and starting CriderShield..."
-systemctl daemon-reload
-systemctl enable cridershield
-systemctl start cridershield
-
-echo "--> CriderShield installed successfully! It will now start automatically on boot."
-echo "--> You can check the status with: sudo systemctl status cridershield"
+echo "CriderShield installed safely on port 3000."
+echo "Embedded DNS remains disabled so Pi-hole keeps ports 53, 80 and 443."
