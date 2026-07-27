@@ -24,6 +24,7 @@ done
 
 install -d -m 0755 "${install_root}/scripts"
 install -d -m 0700 "${config_root}" "${state_root}" "${backup_root}"
+install -d -o root -g root -m 0750 "${state_root}/update" "${state_root}/update/home" "${state_root}/update/cache" "${state_root}/update/npm-cache"
 for script_name in discover-network.sh validate-config.sh check-for-updates.sh enable-tailscale-routing.sh disable-tailscale-routing.sh tailscale-routing-status.sh; do
   install -m 0755 "${repo_root}/scripts/${script_name}" "${install_root}/scripts/"
 done
