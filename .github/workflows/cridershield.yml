@@ -33,6 +33,7 @@ jobs:
           cache-dependency-path: apps/cridershield/package-lock.json
       - run: npm ci
       - run: npm audit --omit=dev
+      - run: npm test
       - run: npx tsc --noEmit
       - run: npm run build
       - run: bash -n install.sh

@@ -1,37 +1,35 @@
 const express = require('express');
+const pihole = require('../services/pihole');
 const router = express.Router();
-const rulesDb = require('../database/rulesDb');
 
-// GET all rules
-router.get('/', (req, res) => {
-  rulesDb.getAll((err, rules) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rules);
-  });
+router.get('/', async (req, res) => {
+  try {
+    res.json(await pihole.getDomains());
+  } catch (error) {
+    res.status(error.status || 502).json({ error: error.message, details: error.details || null });
+  }
 });
 
-// POST new rule
-router.post('/', (req, res) => {
-  rulesDb.create(req.body, (err, id) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.status(201).json({ id, ...req.body });
-  });
+router.post('/', async (req, res) => {
+  const domain = String(req.body.domain || '').trim().toLowerCase();
+  if (!domain) return res.status(400).json({ error: 'Domain is required' });
+  try {
+    await pihole.addDomain({ ...req.body, domain });
+    res.status(201).json({ success: true });
+  } catch (error) {
+    res.status(error.status || 502).json({ error: error.message, details: error.details || null });
+  }
 });
 
-// PUT update rule
-router.put('/:id', (req, res) => {
-  rulesDb.update(req.params.id, req.body, (err) => {
-    if (err) return res.status(500).json({ error: err.message });
+router.delete('/', async (req, res) => {
+  const domain = String(req.body.domain || '').trim().toLowerCase();
+  if (!domain) return res.status(400).json({ error: 'Domain is required' });
+  try {
+    await pihole.deleteDomain({ ...req.body, domain });
     res.json({ success: true });
-  });
-});
-
-// DELETE rule
-router.delete('/:id', (req, res) => {
-  rulesDb.delete(req.params.id, (err) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ success: true });
-  });
+  } catch (error) {
+    res.status(error.status || 502).json({ error: error.message, details: error.details || null });
+  }
 });
 
 module.exports = router;

@@ -3,7 +3,14 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const userDb = require('../database/userDb');
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'crider-secret-key-change-me';
+const JWT_SECRET = process.env.JWT_SECRET;
+
+router.get('/status', (req, res) => {
+  userDb.get('SELECT COUNT(*) as count FROM users', (err, row) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+    res.json({ initialized: row.count > 0 });
+  });
+});
 
 router.post('/setup', async (req, res) => {
   const { username, password } = req.body;
@@ -36,4 +43,10 @@ router.post('/login', (req, res) => {
     res.json({ success: true });
   });
 });
+
+router.post('/logout', (req, res) => {
+  res.clearCookie('token', { httpOnly: true, secure: req.secure, sameSite: 'strict', path: '/' });
+  res.json({ success: true });
+});
+
 module.exports = router;

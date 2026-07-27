@@ -13,8 +13,8 @@ Restart=on-failure
 RestartSec=5
 Environment=NODE_ENV=production
 Environment=PORT=3000
-Environment=DNS_ENABLED=false
 Environment=SCANNER_ENABLED=true
+Environment=PIHOLE_URL=http://127.0.0.1
 Environment=CRIDER_DATA_DIR=/var/lib/cridervpn/cridershield
 EnvironmentFile=-/etc/cridervpn/cridershield.env
 NoNewPrivileges=true

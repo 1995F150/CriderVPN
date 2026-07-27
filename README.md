@@ -17,7 +17,9 @@ Internet -> Wi-Fi uplink -> Ubuntu Server -> Ethernet downlink -> LAN devices
 - Configuration backups and guarded rollback
 - Automatic fast-forward-only updates from GitHub
 - Integrated CriderShield monitoring and management dashboard
-- Authenticated live telemetry, device discovery, DNS views, rules and analytics
+- Authenticated live telemetry and device discovery
+- Live Pi-hole v6 DNS statistics, logs, analytics and allow/deny management
+- Live Tailscale, Pi-hole, Squid, Dante and CriderShield service status
 - Optional Tailscale/LAN reverse-proxy access on port `8080`
 - Future WireGuard upstream mode for an external exit server
 
@@ -41,9 +43,11 @@ sudo bash scripts/install-cridershield.sh
 
 The service listens on port `3000`. Open
 `http://<server-tailscale-ip>:3000/setup` over Tailscale for the first
-administrator account. Find the server address with `tailscale ip -4`. The embedded
-CriderShield DNS listener is disabled by default; Pi-hole remains the DNS
-provider.
+administrator account. Find the server address with `tailscale ip -4`.
+CriderShield uses the Pi-hole v6 API; Pi-hole remains the DNS provider.
+
+Generate a Pi-hole application password and save it only on the server in
+`/etc/cridervpn/cridershield.env` as `PIHOLE_APP_PASSWORD`. Never commit it.
 
 To put the dashboard behind CriderVPN's existing reverse-proxy template,
 set `REVERSE_PROXY_ENABLED="true"` in `/etc/cridervpn/proxy.env` and rerun

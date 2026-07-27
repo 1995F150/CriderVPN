@@ -1,217 +1,83 @@
-# 🛡️ CriderShield
+# CriderShield for CriderVPN
 
-> A modern, self-hosted network management platform built for home labs, businesses, and power users.
+CriderShield is the authenticated web console bundled with CriderVPN. It
+monitors the Ubuntu gateway and connects to the existing Pi-hole v6 API
+instead of running a competing DNS server.
 
-## CriderVPN integration
+## Working features
 
-This copy is maintained inside CriderVPN. It runs as the unprivileged
-`cridervpn` service account on port `3000`, stores its SQLite databases in
-`/var/lib/cridervpn/cridershield`, and requires an installation-generated
-JWT secret.
+- Live CPU, memory, disk, network, uptime and process telemetry
+- Live systemd state for Pi-hole, Tailscale, Squid, Dante and CriderShield
+- Tailscale exit-node and connection status
+- HTTP and SOCKS5 proxy health
+- Network-client discovery from the Linux neighbor table
+- Pi-hole query totals, blocked totals, block rate and active clients
+- Pi-hole query logs with filtering, paging and CSV export
+- Pi-hole history charts and top-domain analytics
+- Pi-hole exact and regular-expression allow/deny management
+- Local administrator setup, login and logout
+- SQLite-backed local users and device names
 
-The embedded DNS listener is disabled by default because the CriderVPN
-server already uses Pi-hole/dnsmasq on port 53. The existing Pi-hole web
-service also keeps ports 80 and 443.
+CriderShield does not replace Pi-hole. Pi-hole remains responsible for DNS
+on port 53 and its existing web interface remains on ports 80 and 443.
+CriderShield listens on port 3000.
 
-Install from the CriderVPN repository root:
+## Install
+
+Requirements:
+
+- Ubuntu Server
+- Node.js 20.17 or newer
+- An installed CriderVPN foundation
+- Pi-hole v6 for DNS statistics and rule management
+
+From the CriderVPN repository:
 
 ```bash
 sudo bash scripts/install-cridershield.sh
 ```
 
-Then visit `http://<server-tailscale-ip>:3000/setup` through Tailscale.
-Find the server address with `tailscale ip -4`.
+Open `http://<server-tailscale-ip>:3000/setup` and create the first local
+administrator.
 
-CriderShield is an all-in-one network management solution inspired by projects like Pi-hole, UniFi, pfSense, and Home Assistant. It provides DNS filtering, network monitoring, device management, secure remote access, and system administration through a modern web dashboard.
+## Connect Pi-hole
 
----
-
-## ✨ Features
-
-### 🌐 DNS Filtering
-- DNS-based ad blocking
-- Malware protection
-- Custom blacklists and whitelists
-- Wildcard domain filtering
-- Category-based filtering
-- DNS query logging
-- DNS cache
-
-### 📊 Live Dashboard
-- Real-time CPU usage
-- Memory usage
-- Disk usage
-- Network activity
-- System uptime
-- Active devices
-- Server health
-- Live charts
-
-### 🖥️ Server Monitoring
-- CPU information
-- RAM usage
-- Storage monitoring
-- Temperature monitoring (where supported)
-- Process monitoring
-- Network interfaces
-- System logs
-
-### 📱 Device Management
-- Discover devices on your network
-- Rename devices
-- Device groups
-- Per-device filtering
-- Device activity history
-
-### 🔒 Security
-- Fully self-hosted authentication
-- Local user accounts
-- Role-based permissions
-- Audit logging
-- Secure password hashing
-- Session management
-
-### 🌍 Tunnel Manager
-- Cloudflare Tunnel integration
-- Secure remote access
-- Public URL management
-- Tunnel health monitoring
-- Zero Trust support (planned)
-
-### 🐳 Docker Management (Planned)
-- View running containers
-- Start/Stop containers
-- Restart containers
-- View logs
-- Container resource usage
-
-### 🤖 AI Insights (Planned)
-- Daily network summaries
-- Security recommendations
-- Suspicious activity detection
-- Usage reports
-
----
-
-# 🚀 Why CriderShield?
-
-Unlike traditional DNS blockers, CriderShield is designed to become a complete self-hosted infrastructure management platform.
-
-It combines:
-
-- DNS Filtering
-- Network Monitoring
-- Server Monitoring
-- Tunnel Management
-- Docker Management
-- Device Management
-- Security Tools
-- AI Insights
-
-...into a single dashboard.
-
----
-
-# 🏗️ Technology Stack
-
-## Frontend
-- React
-- TypeScript
-- Tailwind CSS
-
-## Backend
-- Node.js
-- Express
-
-## Database
-- SQLite (default)
-- PostgreSQL (planned)
-
-## Deployment
-- Docker Compose
-- Ubuntu Server
-- Linux
-
----
-
-# 🔐 Authentication
-
-CriderShield is fully self-hosted.
-
-No Firebase.
-
-No Supabase.
-
-No Auth0.
-
-No cloud authentication providers.
-
-All users are stored securely inside the local server database using encrypted password hashing.
-
-The backend is the source of truth for authentication and sessions.
-
----
-
-# 📦 Installation
-
-Coming soon.
-
-The project will support:
+Pi-hole v6 uses session-based API authentication. Generate an application
+password in the Pi-hole settings, then edit:
 
 ```bash
-git clone https://github.com/1995F150/CriderShield.git
-
-cd CriderShield
-
-docker compose up -d
+sudoedit /etc/cridervpn/cridershield.env
 ```
 
----
+Set:
 
-# 📈 Roadmap
+```ini
+PIHOLE_URL=http://127.0.0.1
+PIHOLE_APP_PASSWORD=your-generated-application-password
+```
 
-- [x] Project Foundation
-- [x] Dashboard UI
-- [x] Authentication
-- [ ] System Monitoring
-- [ ] DNS Filtering Engine
-- [ ] Device Discovery
-- [ ] Query Logging
-- [ ] Tunnel Manager
-- [ ] Docker Management
-- [ ] Backup & Restore
-- [ ] Plugin System
-- [ ] AI Insights
-- [ ] Mobile Dashboard
+Restart only the dashboard:
 
----
+```bash
+sudo systemctl restart cridershield
+```
 
-# 📄 License
+The application password stays in the root-owned server configuration and
+must never be committed to GitHub.
 
-License coming soon.
+## Update
 
----
+CriderVPN's timer updates the managed repository without restarting network
+services. After reviewing an update, deploy the dashboard with:
 
-# 👨‍💻 Developer
+```bash
+sudo bash /opt/cridervpn/repository/scripts/install-cridershield.sh
+```
 
-**Jessie Crider**
+## Remove
 
-Founder of **CriderGPT LLC**
+```bash
+sudo bash /opt/cridervpn/apps/cridershield/uninstall.sh
+```
 
-Virginia, USA
-
----
-
-# ⭐ Contributing
-
-Contributions, bug reports, feature requests, and pull requests will be welcome once the project reaches its first stable release.
-
----
-
-# ⚠️ Disclaimer
-
-CriderShield is intended for managing systems and networks that you own or are authorized to administer. Always deploy responsibly and follow applicable laws, regulations, and organizational policies.
-
----
-
-Made with ❤️ by CriderGPT LLC
+The uninstaller preserves configuration and SQLite data for recovery.
