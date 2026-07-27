@@ -8,27 +8,31 @@
     "start": "node server/index.js"
   },
   "dependencies": {
-    "bcrypt": "^5.1.1",
-    "cookie-parser": "^1.4.6",
+    "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
     "dns2": "^2.1.0",
     "dotenv": "^16.4.5",
-    "express": "^4.1.9",
+    "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
-    "lucide-react": "^0.378.0",
-    "next": "14.2.3",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "recharts": "^2.12.7",
-    "sqlite3": "^5.1.7",
-    "systeminformation": "^5.22.8"
+    "lucide-react": "^0.546.0",
+    "next": "16.2.12",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "recharts": "^3.3.0",
+    "sqlite3": "^6.0.1",
+    "systeminformation": "^5.33.1"
   },
   "devDependencies": {
     "@types/node": "^20",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
     "autoprefixer": "^10",
-    "postcss": "^8",
+    "postcss": "^8.5.23",
     "tailwindcss": "^3.4.3",
     "typescript": "^5"
+  },
+  "overrides": {
+    "postcss": "$postcss",
+    "sharp": "0.35.3"
   }
 }
