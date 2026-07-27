@@ -28,7 +28,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchTelemetry = async () => {
       try {
-        const response = await fetch('http://localhost:3000/api/v1/system/telemetry');
+        const response = await fetch('/api/v1/telemetry');
         const data = await response.json();
         setTelemetry(data);
         setLoading(false);
