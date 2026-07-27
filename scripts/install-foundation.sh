@@ -40,6 +40,7 @@ REPOSITORY_URL="${repository_url}"
 REPOSITORY_DIR="${managed_repo}"
 UPDATE_BRANCH="main"
 UPDATE_MODE="apply"
+AUTO_RESTART_CRIDERSHIELD="true"
 EOF
   chmod 0600 "${config_root}/update.env"
 fi
