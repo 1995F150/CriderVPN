@@ -9,7 +9,7 @@ export default function ClientsPage() {
   useEffect(() => {
     const fetchDevices = async () => {
       try {
-        const res = await fetch('http://localhost:3000/api/v1/devices');
+        const res = await fetch('/api/v1/devices');
         setDevices(await res.json());
       } catch (e) { console.error('Error fetching devices', e); }
     };
