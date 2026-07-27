@@ -26,7 +26,7 @@ export default function SetupWizard() {
       setMessage("Setup successful! Redirecting to login...");
       setTimeout(() => router.push('/login'), 2000);
     } else {
-      setMessage(data.message || "Setup failed");
+      setMessage(data.error || "Setup failed");
     }
   };
 
