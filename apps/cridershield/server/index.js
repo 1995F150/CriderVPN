@@ -5,12 +5,12 @@ const next = require('next');
 const auth = require('./middleware/auth');
 const authRouter = require('./routes/auth');
 const telemetryRouter = require('./routes/telemetry');
-const dnsServer = require('./dns/server');
 const dnsRoutes = require('./routes/dns');
 const logsRoutes = require('./routes/logs');
 const devicesRoutes = require('./routes/devices');
 const rulesRoutes = require('./routes/rules');
 const scanner = require('./services/scanner');
+const systemRoutes = require('./routes/system');
 
 const dev = process.env.NODE_ENV !== 'production';
 const nextApp = next({ dev });
@@ -37,6 +37,7 @@ nextApp.prepare().then(() => {
   app.use('/api/v1/devices', devicesRoutes);
   app.use('/api/v1/rules', rulesRoutes);
   app.use('/api/v1/analytics', require('./routes/analytics'));
+  app.use('/api/v1/system', systemRoutes);
 
   app.get('/api/v1/status', (req, res) => {
     res.json({ status: 'running' });
@@ -48,12 +49,6 @@ nextApp.prepare().then(() => {
 
   app.listen(PORT, () => {
     console.log(`CriderShield running on port ${PORT}`);
-
-    if (process.env.DNS_ENABLED === 'true') {
-      dnsServer.start();
-    } else {
-      console.log('Embedded DNS disabled; existing Pi-hole/dnsmasq remains authoritative');
-    }
 
     if (process.env.SCANNER_ENABLED !== 'false') {
       scanner.startScanner();
