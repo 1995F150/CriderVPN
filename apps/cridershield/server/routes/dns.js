@@ -1,17 +1,38 @@
 const express = require('express');
+const pihole = require('../services/pihole');
 const router = express.Router();
-const logger = require('../dns/logger');
-const filter = require('../dns/filter');
-const cache = require('../dns/cache');
 
-router.get('/stats', (req, res) => res.json(logger.getStats()));
-router.get('/logs', (req, res) => res.json(logger.getLogs()));
-router.get('/cache', (req, res) => res.json(cache.getStats()));
-router.post('/rules', (req, res) => {
-  const { action, domain } = req.body;
-  if (action === 'BLOCK') filter.addBlock(domain);
-  if (action === 'ALLOW') filter.addAllow(domain);
-  res.json({ success: true });
+const handle = (res, error) => {
+  console.error('Pi-hole API error:', error.message);
+  res.status(error.status || 502).json({
+    error: error.message,
+    details: error.details || null,
+    source: 'Pi-hole'
+  });
+};
+
+router.get('/status', async (req, res) => {
+  try {
+    res.json(await pihole.getSummary());
+  } catch (error) {
+    handle(res, error);
+  }
+});
+
+router.get('/stats', async (req, res) => {
+  try {
+    res.json(await pihole.getSummary());
+  } catch (error) {
+    handle(res, error);
+  }
+});
+
+router.get('/logs', async (req, res) => {
+  try {
+    res.json(await pihole.getQueries({ limit: req.query.limit || 100 }));
+  } catch (error) {
+    handle(res, error);
+  }
 });
 
 module.exports = router;
