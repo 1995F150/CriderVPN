@@ -4,6 +4,11 @@ set -Eeuo pipefail
 action="${1:-}"
 requested_address="${2:-}"
 
+if [[ "$#" -ne 2 ]]; then
+  echo "Usage: $0 block|unblock IP_ADDRESS" >&2
+  exit 2
+fi
+
 case "${action}" in
   block|unblock) ;;
   *) echo "Usage: $0 block|unblock IP_ADDRESS" >&2; exit 2 ;;
