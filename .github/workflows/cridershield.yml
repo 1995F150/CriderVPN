@@ -1,0 +1,38 @@
+name: CriderShield
+
+on:
+  pull_request:
+    paths:
+      - "apps/cridershield/**"
+      - "scripts/install-cridershield.sh"
+      - ".github/workflows/cridershield.yml"
+  push:
+    branches:
+      - main
+      - integrate-cridershield
+    paths:
+      - "apps/cridershield/**"
+      - "scripts/install-cridershield.sh"
+      - ".github/workflows/cridershield.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/cridershield
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20.17.0"
+          cache: npm
+          cache-dependency-path: apps/cridershield/package-lock.json
+      - run: npm ci
+      - run: npm audit --omit=dev
+      - run: npx tsc --noEmit
+      - run: npm run build
+      - run: bash -n install.sh
