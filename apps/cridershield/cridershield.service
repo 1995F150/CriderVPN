@@ -1,0 +1,16 @@
+[Unit]
+Description=CriderShield Network Engine
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/cridergpt-engine/CriderShield
+ExecStart=/usr/bin/env npm start
+Restart=on-failure
+Environment=NODE_ENV=production
+Environment=PORT=80
+Environment=DNS_PORT=53
+
+[Install]
+WantedBy=multi-user.target
