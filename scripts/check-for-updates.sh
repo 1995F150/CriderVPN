@@ -36,7 +36,7 @@ case "${AUTO_RESTART_CRIDERSHIELD}" in
   *) echo "AUTO_RESTART_CRIDERSHIELD must be true or false." >&2; exit 1 ;;
 esac
 
-install -d -m 0750 "${state_dir}"
+install -d -m 0750 "${state_dir}" "${state_dir}/home" "${state_dir}/cache" "${state_dir}/npm-cache"
 
 record_failure() {
   local exit_code="$?"
