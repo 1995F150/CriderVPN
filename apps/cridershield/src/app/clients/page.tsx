@@ -250,6 +250,7 @@ export default function ClientsPage() {
           const DeviceIcon = iconFor(device);
           const ConnectionIcon = connectionIcon(device.connection_type);
           const services = Array.isArray(device.metadata?.services) ? device.metadata.services : [];
+          const addresses = Array.isArray(device.metadata?.addresses) ? device.metadata.addresses : [];
           return (
             <article key={device.mac_address} className="rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-lg">
               <div className="flex items-start justify-between gap-3">
@@ -287,9 +288,9 @@ export default function ClientsPage() {
                 <Detail label="Download" value={formatBytes(device.bytes_down)} />
               </div>
 
-              {device.metadata?.addresses?.length > 1 && (
+              {addresses.length > 1 && (
                 <div className="mt-4 rounded-lg bg-slate-950/60 p-3 text-xs text-slate-400">
-                  Addresses: {device.metadata.addresses.join(', ')}
+                  Addresses: {addresses.join(', ')}
                 </div>
               )}
               {services.length > 0 && (
