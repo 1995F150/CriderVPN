@@ -1,6 +1,9 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
-const db = new sqlite3.Database(process.env.DB_PATH || path.join(__dirname, '../../data/devices.db'));
+const fs = require('fs');
+const dataDir = process.env.CRIDER_DATA_DIR || path.join(__dirname, '../../data');
+fs.mkdirSync(dataDir, { recursive: true });
+const db = new sqlite3.Database(process.env.DB_PATH || path.join(dataDir, 'devices.db'));
 
 db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS devices (
@@ -23,8 +26,9 @@ const upsertDevice = (dev) => {
 
 const markOffline = () => db.run(`UPDATE devices SET status = 'Offline' WHERE last_seen < datetime('now', '-5 minutes')`);
 const getDevices = (cb) => db.all(`SELECT * FROM devices ORDER BY last_seen DESC`, cb);
+const getByIp = (ip, cb) => db.get(`SELECT * FROM devices WHERE ip_address = ?`, [ip], cb);
 const updateDevice = (mac, data, cb) => {
   db.run(`UPDATE devices SET friendly_name = ?, icon = ?, group_name = ?, notes = ? WHERE mac_address = ?`, [data.friendly_name, data.icon, data.group_name, data.notes, mac], cb);
 };
 
-module.exports = { upsertDevice, markOffline, getDevices, updateDevice, db };
+module.exports = { upsertDevice, markOffline, getDevices, getByIp, updateDevice, db };
