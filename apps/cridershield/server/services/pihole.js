@@ -72,11 +72,7 @@ const request = async (path, options = {}, allowRetry = true) => {
 };
 
 const rangeToSeconds = (range) => {
-  const values = {
-    hour: 3600,
-    day: 86400,
-    week: 604800
-  };
+  const values = { hour: 3600, day: 86400, week: 604800 };
   return values[range] || values.day;
 };
 
@@ -89,6 +85,7 @@ const getSummary = async () => {
   return {
     source: 'Pi-hole',
     connected: true,
+    configured: Boolean(password),
     blocking: blocking.blocking === true,
     totalQueries: Number(queries.total || 0),
     blockedQueries: Number(queries.blocked || 0),
@@ -139,7 +136,7 @@ const getAnalytics = async (range = 'day') => {
   const [summary, history, top] = await Promise.all([
     getSummary(),
     request(`/api/history?from=${from}&until=${until}`),
-    request(`/api/stats/top_domains?count=10`)
+    request('/api/stats/top_domains?count=10')
   ]);
   const rows = Array.isArray(history.history) ? history.history : [];
   const trend = rows.map(row => ({
