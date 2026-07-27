@@ -8,12 +8,23 @@ export default function AnalyticsPage() {
   const [overview, setOverview] = useState({ totalQueries: 0, blockedQueries: 0, blockRate: 0 });
   const [trend, setTrend] = useState([]);
   const [topDomains, setTopDomains] = useState([]);
-  const [range, setRange] = useState('-24 hours');
+  const [range, setRange] = useState('day');
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    fetch(`/api/v1/analytics/overview?range=${range}`).then(r => r.json()).then(setOverview);
-    fetch(`/api/v1/analytics/trend?range=${range}`).then(r => r.json()).then(setTrend);
-    fetch(`/api/v1/analytics/top-domains?range=${range}`).then(r => r.json()).then(setTopDomains);
+    fetch(`/api/v1/analytics?range=${range}`)
+      .then(async response => {
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.details || body.error || 'Unable to load Pi-hole analytics');
+        return body;
+      })
+      .then(data => {
+        setOverview(data.overview);
+        setTrend(data.trend);
+        setTopDomains(data.topDomains);
+        setError('');
+      })
+      .catch(err => setError(err.message));
   }, [range]);
 
   return (
@@ -21,11 +32,12 @@ export default function AnalyticsPage() {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Network Analytics</h1>
         <select value={range} onChange={(e) => setRange(e.target.value)} className="border p-2 rounded bg-white dark:bg-gray-800 dark:text-white">
-          <option value="-1 hour">Last Hour</option>
-          <option value="-24 hours">Last 24 Hours</option>
-          <option value="-7 days">Last 7 Days</option>
+          <option value="hour">Last Hour</option>
+          <option value="day">Last 24 Hours</option>
+          <option value="week">Last 7 Days</option>
         </select>
       </div>
+      {error && <div className="rounded border border-amber-700 bg-amber-950/30 p-4 text-amber-200">{error}</div>}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <StatCard title="Total Queries" value={overview.totalQueries} icon={Activity} />
         <StatCard title="Blocked Queries" value={overview.blockedQueries} icon={Shield} status="green" />
