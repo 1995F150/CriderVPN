@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 
 // Ensure the data directory exists
-const dataDir = path.join(__dirname, '../../data');
+const dataDir = process.env.CRIDER_DATA_DIR || path.join(__dirname, '../../data');
 fs.mkdirSync(dataDir, { recursive: true });
 
 // Store the database in the data folder
