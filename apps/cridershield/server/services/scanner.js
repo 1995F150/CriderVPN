@@ -50,8 +50,9 @@ const addEvidence = (records, evidence, source, nameRank = 99) => {
   if (!key) key = `virtual:ip:${evidence.ip_address}`;
 
   if (mac && existingEntry && existingEntry[0].startsWith('virtual:')) {
+    const priorEvidence = existingEntry[1];
     records.delete(existingEntry[0]);
-    existingEntry = null;
+    existingEntry = [key, priorEvidence];
   }
 
   const current = records.get(key) || existingEntry?.[1] || {
