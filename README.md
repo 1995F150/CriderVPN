@@ -53,9 +53,10 @@ To put the dashboard behind CriderVPN's existing reverse-proxy template,
 set `REVERSE_PROXY_ENABLED="true"` in `/etc/cridervpn/proxy.env` and rerun
 the proxy installer. It will use port `8080`, leaving Pi-hole on 80/443.
 
-The GitHub updater safely refreshes the managed repository but does not
-automatically rebuild or restart the dashboard. Rerun the dashboard
-installer after reviewing an application update.
+When automatic restart is enabled, the GitHub updater rebuilds an already
+installed CriderShield dashboard after a new commit and restarts it only after
+a successful build. It verifies that the service is active and retries on the
+next timer run when deployment fails.
 
 ## Tailscale VPN mode
 
@@ -88,7 +89,15 @@ sudo bash /opt/cridervpn/scripts/tailscale-routing-status.sh
 
 ## Automatic updates
 
-`cridervpn-update.timer` checks GitHub about every 30 minutes. It updates the managed repository at `/opt/cridervpn/repository` only with a clean fast-forward. It never automatically runs network activation, firewall migration or rollback scripts.
+`cridervpn-update.timer` checks GitHub about every 30 minutes. It updates the
+managed repository at `/opt/cridervpn/repository` only with a clean
+fast-forward. If CriderShield is already installed and
+`AUTO_RESTART_CRIDERSHIELD="true"`, it deploys each new repository commit,
+restarts `cridershield.service`, and records the deployed commit. Network
+activation, firewall migration, and rollback scripts always remain manual.
+
+Set `AUTO_RESTART_CRIDERSHIELD="false"` in
+`/etc/cridervpn/update.env` to disable automatic dashboard deployment.
 
 ```bash
 systemctl status cridervpn-update.timer
