@@ -37,6 +37,26 @@ case "${AUTO_RESTART_CRIDERSHIELD}" in
 esac
 
 install -d -m 0750 "${state_dir}"
+
+record_failure() {
+  local exit_code="$?"
+  local line="${1:-unknown}"
+  local failed_at failure_tmp
+  trap - ERR
+  set +e
+  failed_at="$(date -u --iso-8601=seconds)"
+  failure_tmp="$(mktemp "${state_dir}/status.env.XXXXXX")"
+  {
+    printf 'CHECKED_AT=%q\n' "${failed_at}"
+    printf 'LAST_RESULT=%q\n' "failure"
+    printf 'ERROR_LINE=%q\n' "${line}"
+  } > "${failure_tmp}"
+  chmod 0640 "${failure_tmp}"
+  mv -f "${failure_tmp}" "${state_file}"
+  exit "${exit_code}"
+}
+trap 'record_failure "$LINENO"' ERR
+
 exec 9>"${lock_file}"
 flock -n 9 || {
   echo "Another update check is already running."
@@ -87,39 +107,56 @@ fi
 installed_cridershield="/opt/cridervpn/apps/cridershield"
 source_cridershield="${REPOSITORY_DIR}/apps/cridershield"
 deployed_commit=""
+cridershield_deploy_required=false
 [[ -r "${cridershield_marker}" ]] && deployed_commit="$(<"${cridershield_marker}")"
+
+write_cridershield_marker() {
+  local marker_tmp
+  marker_tmp="$(mktemp "${state_dir}/cridershield-commit.XXXXXX")"
+  printf '%s\n' "${current_commit}" > "${marker_tmp}"
+  chmod 0640 "${marker_tmp}"
+  mv -f "${marker_tmp}" "${cridershield_marker}"
+}
 
 if [[ "${UPDATE_MODE}" == "apply" &&
       "${AUTO_RESTART_CRIDERSHIELD}" == "true" &&
       -d "${installed_cridershield}" &&
       -f "${source_cridershield}/package.json" &&
       "${deployed_commit}" != "${current_commit}" ]]; then
-  echo "Deploying CriderShield for repository commit ${current_commit}."
-  bash "${REPOSITORY_DIR}/scripts/install-cridershield.sh"
-  systemctl restart cridershield.service
-  if ! systemctl is-active --quiet cridershield.service; then
-    echo "CriderShield failed its post-update service check." >&2
-    systemctl status cridershield.service --no-pager -l >&2 || true
-    exit 1
+  if [[ -z "${deployed_commit}" ]] ||
+     ! git -C "${REPOSITORY_DIR}" cat-file -e "${deployed_commit}^{commit}" 2>/dev/null ||
+     ! git -C "${REPOSITORY_DIR}" diff --quiet "${deployed_commit}" "${current_commit}" --        apps/cridershield scripts/install-cridershield.sh; then
+    cridershield_deploy_required=true
   fi
 
-  marker_tmp="$(mktemp "${state_dir}/cridershield-commit.XXXXXX")"
-  printf '%s\n' "${current_commit}" > "${marker_tmp}"
-  chmod 0640 "${marker_tmp}"
-  mv -f "${marker_tmp}" "${cridershield_marker}"
-  cridershield_restarted=true
+  if [[ "${cridershield_deploy_required}" == "true" ]]; then
+    echo "Deploying CriderShield for repository commit ${current_commit}."
+    bash "${REPOSITORY_DIR}/scripts/install-cridershield.sh"
+    if ! systemctl is-active --quiet cridershield.service; then
+      echo "CriderShield failed its post-update service check." >&2
+      systemctl status cridershield.service --no-pager -l >&2 || true
+      exit 1
+    fi
+    cridershield_restarted=true
+  else
+    echo "Skipping CriderShield rebuild: application files did not change."
+  fi
+
+  write_cridershield_marker
 fi
 
 checked_at="$(date -u --iso-8601=seconds)"
 tmp_file="$(mktemp "${state_dir}/status.env.XXXXXX")"
 {
   printf 'CHECKED_AT=%q\n' "${checked_at}"
+  printf 'LAST_RESULT=%q\n' "success"
   printf 'CURRENT_COMMIT=%q\n' "${current_commit}"
   printf 'AVAILABLE_COMMIT=%q\n' "${available_commit}"
   printf 'UPDATE_AVAILABLE=%q\n' "${update_available}"
   printf 'UPDATE_APPLIED=%q\n' "${update_applied}"
   printf 'UPDATE_MODE=%q\n' "${UPDATE_MODE}"
   printf 'CRIDERSHIELD_RESTARTED=%q\n' "${cridershield_restarted}"
+  printf 'CRIDERSHIELD_DEPLOY_REQUIRED=%q\n' "${cridershield_deploy_required}"
 } > "${tmp_file}"
 chmod 0640 "${tmp_file}"
 mv -f "${tmp_file}" "${state_file}"

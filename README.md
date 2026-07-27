@@ -18,6 +18,7 @@ Internet -> Wi-Fi uplink -> Ubuntu Server -> Ethernet downlink -> LAN devices
 - Automatic fast-forward-only updates from GitHub
 - Integrated CriderShield monitoring and management dashboard
 - Authenticated live telemetry and device discovery
+- Reversible per-client internet blocking with protected gateway/server roles
 - Live Pi-hole v6 DNS statistics, logs, analytics and allow/deny management
 - Live Tailscale, Pi-hole, Squid, Dante and CriderShield service status
 - Optional Tailscale/LAN reverse-proxy access on port `8080`
@@ -53,10 +54,11 @@ To put the dashboard behind CriderVPN's existing reverse-proxy template,
 set `REVERSE_PROXY_ENABLED="true"` in `/etc/cridervpn/proxy.env` and rerun
 the proxy installer. It will use port `8080`, leaving Pi-hole on 80/443.
 
-When automatic restart is enabled, the GitHub updater rebuilds an already
-installed CriderShield dashboard after a new commit and restarts it only after
-a successful build. It verifies that the service is active and retries on the
-next timer run when deployment fails.
+When automatic restart is enabled, the GitHub updater rebuilds CriderShield
+only when application files changed. It builds in a staging directory, swaps
+the release only after a successful build, verifies the service, and restores
+the previous release if startup fails. This keeps matching HTML, CSS and
+JavaScript available during the build.
 
 ## Tailscale VPN mode
 
@@ -95,6 +97,11 @@ fast-forward. If CriderShield is already installed and
 `AUTO_RESTART_CRIDERSHIELD="true"`, it deploys each new repository commit,
 restarts `cridershield.service`, and records the deployed commit. Network
 activation, firewall migration, and rollback scripts always remain manual.
+
+The Clients dashboard can block or restore internet access for an identified
+client. Gateway Router, VPN Gateway and Shared LAN records are protected from
+blocking to prevent accidental network lockout. Rules are restored after a
+CriderShield restart.
 
 Set `AUTO_RESTART_CRIDERSHIELD="false"` in
 `/etc/cridervpn/update.env` to disable automatic dashboard deployment.

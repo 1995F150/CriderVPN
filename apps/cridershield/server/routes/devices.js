@@ -2,10 +2,12 @@ const express = require('express');
 const router = express.Router();
 const deviceDb = require('../database/deviceDb');
 const scanner = require('../services/scanner');
+const accessControl = require('../services/accessControl');
 
 const deserialize = row => ({
   ...row,
   favorite: Boolean(row.favorite),
+  internet_blocked: Boolean(row.internet_blocked),
   confidence: Number(row.confidence || 0),
   dns_queries: Number(row.dns_queries || 0),
   blocked_queries: Number(row.blocked_queries || 0),
@@ -75,6 +77,45 @@ router.post('/events/:id/acknowledge', (req, res) => {
   deviceDb.acknowledgeEvent(req.params.id, error => {
     if (error) return res.status(500).json({ error: error.message });
     res.json({ success: true });
+  });
+});
+
+router.post('/:mac/internet-access', (req, res) => {
+  const blocked = req.body?.blocked;
+  if (typeof blocked !== 'boolean') {
+    return res.status(400).json({ error: 'blocked must be true or false' });
+  }
+
+  deviceDb.getDevice(req.params.mac, async (lookupError, device) => {
+    if (lookupError) return res.status(500).json({ error: lookupError.message });
+    if (!device) return res.status(404).json({ error: 'Device not found' });
+
+    const protectedRoles = new Set(['Gateway Router', 'VPN Gateway', 'Shared LAN']);
+    if (protectedRoles.has(device.role)) {
+      return res.status(409).json({ error: `${device.role} is protected from client blocking` });
+    }
+    if (!device.ip_address) {
+      return res.status(409).json({ error: 'This device has no usable IP address yet' });
+    }
+
+    try {
+      await accessControl.apply(device.ip_address, blocked);
+      deviceDb.setInternetBlocked(req.params.mac, blocked, async (writeError, changes) => {
+        if (writeError || !changes) {
+          try { await accessControl.apply(device.ip_address, !blocked); } catch {}
+          return res.status(writeError ? 500 : 404).json({
+            error: writeError?.message || 'Device not found'
+          });
+        }
+        res.json({
+          success: true,
+          internet_blocked: blocked,
+          ip_address: device.ip_address
+        });
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
   });
 });
 

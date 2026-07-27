@@ -19,7 +19,7 @@ Environment=ACTIVE_DISCOVERY=true
 Environment=PIHOLE_URL=http://127.0.0.1
 Environment=CRIDER_DATA_DIR=/var/lib/cridervpn/cridershield
 EnvironmentFile=-/etc/cridervpn/cridershield.env
-NoNewPrivileges=true
+NoNewPrivileges=false
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
