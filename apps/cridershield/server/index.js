@@ -1,8 +1,9 @@
 const express = require('express');
-const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const next = require('next');
 
 const auth = require('./middleware/auth');
+const authRouter = require('./routes/auth');
 const telemetryRouter = require('./routes/telemetry');
 const dnsServer = require('./dns/server');
 const dnsRoutes = require('./routes/dns');
@@ -17,13 +18,19 @@ const handle = nextApp.getRequestHandler();
 
 const PORT = process.env.PORT || 3000;
 
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET is required in production');
+}
+
 nextApp.prepare().then(() => {
   const app = express();
 
-  app.use(cors());
   app.use(express.json());
+  app.use(cookieParser());
 
-  app.use('/api/v1/auth', auth.router);
+  app.set('trust proxy', 'loopback');
+  app.use('/api/auth', authRouter);
+  app.use('/api/v1', auth());
   app.use('/api/v1/telemetry', telemetryRouter);
   app.use('/api/v1/dns', dnsRoutes);
   app.use('/api/v1/logs', logsRoutes);
@@ -42,8 +49,15 @@ nextApp.prepare().then(() => {
   app.listen(PORT, () => {
     console.log(`CriderShield running on port ${PORT}`);
 
-    dnsServer.start();
-    scanner.start();
+    if (process.env.DNS_ENABLED === 'true') {
+      dnsServer.start();
+    } else {
+      console.log('Embedded DNS disabled; existing Pi-hole/dnsmasq remains authoritative');
+    }
+
+    if (process.env.SCANNER_ENABLED !== 'false') {
+      scanner.startScanner();
+    }
   });
 }).catch((error) => {
   console.error('Failed to start CriderShield:', error);
