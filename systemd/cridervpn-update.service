@@ -9,6 +9,8 @@ Type=oneshot
 ExecStart=/opt/cridervpn/scripts/check-for-updates.sh
 User=root
 Group=root
+Environment=NPM_CONFIG_CACHE=/var/lib/cridervpn/update/npm-cache
+Environment=NPM_CONFIG_UPDATE_NOTIFIER=false
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectHome=true
