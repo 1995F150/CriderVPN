@@ -2,9 +2,10 @@
 Description=Check periodically for CriderVPN updates
 
 [Timer]
-OnBootSec=5min
-OnUnitActiveSec=30min
-RandomizedDelaySec=5min
+OnBootSec=1min
+OnUnitActiveSec=1min
+AccuracySec=1s
+RandomizedDelaySec=0
 Persistent=true
 Unit=cridervpn-update.service
 
