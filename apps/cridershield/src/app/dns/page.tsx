@@ -6,6 +6,7 @@ import { StatCard } from '@/components/dashboard/StatCard';
 
 type Stats = {
   connected: boolean;
+  configured: boolean;
   blocking: boolean;
   totalQueries: number;
   blockedQueries: number;
@@ -26,6 +27,8 @@ export default function DNSPage() {
     ]);
     if (!statsRes.ok) {
       const body = await statsRes.json().catch(() => ({}));
+      setStats(null);
+      setLogs([]);
       setError(body.details || body.error || 'Pi-hole data is unavailable');
       return;
     }
@@ -60,9 +63,18 @@ export default function DNSPage() {
             <StatCard title="Block Rate" value={`${stats.blockRate.toFixed(1)}%`} icon={Database} />
             <StatCard title="Active Clients" value={stats.clients.active} icon={Users} />
           </div>
-          <div className={`rounded-lg border p-4 ${stats.blocking ? 'border-emerald-800 bg-emerald-950/30 text-emerald-300' : 'border-red-800 bg-red-950/30 text-red-300'}`}>
-            Pi-hole blocking is {stats.blocking ? 'enabled' : 'disabled'}.
-          </div>
+          {!stats.configured ? (
+            <div className="rounded-lg border border-amber-700 bg-amber-950/30 p-4 text-amber-200">
+              <div className="font-medium">Pi-hole application password is not configured</div>
+              <div className="mt-1 text-sm">
+                Set PIHOLE_APP_PASSWORD in /etc/cridervpn/cridershield.env, then restart CriderShield.
+              </div>
+            </div>
+          ) : (
+            <div className={`rounded-lg border p-4 ${stats.blocking ? 'border-emerald-800 bg-emerald-950/30 text-emerald-300' : 'border-red-800 bg-red-950/30 text-red-300'}`}>
+              Pi-hole blocking is {stats.blocking ? 'enabled' : 'disabled'}.
+            </div>
+          )}
         </>
       )}
       <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900">
