@@ -17,7 +17,8 @@ const extraColumns = {
   blocked_queries: 'INTEGER DEFAULT 0',
   bytes_up: 'INTEGER',
   bytes_down: 'INTEGER',
-  metadata: 'TEXT'
+  metadata: 'TEXT',
+  internet_blocked: 'INTEGER DEFAULT 0'
 };
 
 db.serialize(() => {
@@ -180,6 +181,29 @@ const getDevices = (callback) => db.all(
 );
 
 const getByIp = (ip, callback) => db.get('SELECT * FROM devices WHERE ip_address = ?', [ip], callback);
+const getDevice = (mac, callback) => db.get('SELECT * FROM devices WHERE mac_address = ?', [mac.toLowerCase()], callback);
+
+const setInternetBlocked = (mac, blocked, callback) => {
+  db.run(
+    'UPDATE devices SET internet_blocked = ? WHERE mac_address = ?',
+    [blocked ? 1 : 0, mac.toLowerCase()],
+    function (error) {
+      if (!error && this.changes) {
+        addEvent(
+          mac.toLowerCase(),
+          blocked ? 'internet_blocked' : 'internet_restored',
+          blocked ? 'Internet access was blocked for this device' : 'Internet access was restored for this device'
+        );
+      }
+      callback(error, this.changes);
+    }
+  );
+};
+
+const getBlockedDevices = (callback) => db.all(
+  'SELECT mac_address, ip_address FROM devices WHERE internet_blocked = 1',
+  callback
+);
 
 const updateDevice = (mac, data, callback) => {
   db.run(
@@ -225,6 +249,9 @@ module.exports = {
   markInactive,
   getDevices,
   getByIp,
+  getDevice,
+  setInternetBlocked,
+  getBlockedDevices,
   updateDevice,
   getHistory,
   getEvents,
