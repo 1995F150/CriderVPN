@@ -1,59 +1,83 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Activity, Database, Shield, Users } from 'lucide-react';
 import { StatCard } from '@/components/dashboard/StatCard';
 
+type Stats = {
+  connected: boolean;
+  blocking: boolean;
+  totalQueries: number;
+  blockedQueries: number;
+  blockRate: number;
+  uniqueDomains: number;
+  clients: { active: number; total: number };
+};
+
 export default function DNSPage() {
-  const [stats, setStats] = useState({ totalQueries: 0, blockedCount: 0 });
-  const [logs, setLogs] = useState([]);
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [logs, setLogs] = useState<any[]>([]);
+  const [error, setError] = useState('');
+
+  const load = async () => {
+    const [statsRes, logsRes] = await Promise.all([
+      fetch('/api/v1/dns/stats'),
+      fetch('/api/v1/dns/logs?limit=25')
+    ]);
+    if (!statsRes.ok) {
+      const body = await statsRes.json().catch(() => ({}));
+      setError(body.details || body.error || 'Pi-hole data is unavailable');
+      return;
+    }
+    setStats(await statsRes.json());
+    setLogs(logsRes.ok ? await logsRes.json() : []);
+    setError('');
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const statsRes = await fetch('/api/v1/dns/stats');
-        const statsData = await statsRes.json();
-        setStats(statsData);
-
-        const logsRes = await fetch('/api/v1/dns/logs');
-        const logsData = await logsRes.json();
-        setLogs(logsData);
-      } catch (error) {
-        console.error('Error fetching DNS data:', error);
-      }
-    };
-    fetchData();
+    load();
+    const timer = setInterval(load, 10000);
+    return () => clearInterval(timer);
   }, []);
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">DNS Filtering Dashboard</h1>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-        <StatCard title="Total Queries" value={stats.totalQueries} />
-        <StatCard title="Blocked Queries" value={stats.blockedCount} color="red" />
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">Pi-hole DNS</h1>
+        <p className="text-sm text-slate-400">Live statistics and recent queries from the Pi-hole v6 API.</p>
       </div>
-
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timestamp</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Domain</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client IP</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {logs.map((log: any, index: number) => (
-              <tr key={index}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{log.timestamp}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{log.domain}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{log.clientIp}</td>
-                <td className={`px-6 py-4 whitespace-nowrap text-sm ${log.status === 'BLOCK' ? 'text-red-600' : 'text-green-600'}`}>
-                  {log.status}
-                </td>
+      {error && (
+        <div className="rounded-lg border border-amber-700 bg-amber-950/30 p-4 text-amber-200">
+          <div className="font-medium">Pi-hole connection needs attention</div>
+          <div className="mt-1 text-sm">{error}</div>
+        </div>
+      )}
+      {stats && (
+        <>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <StatCard title="Total Queries" value={stats.totalQueries} icon={Activity} />
+            <StatCard title="Blocked Queries" value={stats.blockedQueries} icon={Shield} status="green" />
+            <StatCard title="Block Rate" value={`${stats.blockRate.toFixed(1)}%`} icon={Database} />
+            <StatCard title="Active Clients" value={stats.clients.active} icon={Users} />
+          </div>
+          <div className={`rounded-lg border p-4 ${stats.blocking ? 'border-emerald-800 bg-emerald-950/30 text-emerald-300' : 'border-red-800 bg-red-950/30 text-red-300'}`}>
+            Pi-hole blocking is {stats.blocking ? 'enabled' : 'disabled'}.
+          </div>
+        </>
+      )}
+      <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900">
+        <table className="min-w-full divide-y divide-slate-800">
+          <thead><tr>{['Timestamp', 'Domain', 'Client', 'Action'].map(label => <th key={label} className="px-5 py-3 text-left text-xs uppercase text-slate-400">{label}</th>)}</tr></thead>
+          <tbody className="divide-y divide-slate-800">
+            {logs.map((log, index) => (
+              <tr key={log.id || index}>
+                <td className="px-5 py-3 text-sm text-slate-400">{log.timestamp}</td>
+                <td className="px-5 py-3 text-sm">{log.domain}</td>
+                <td className="px-5 py-3 text-sm text-slate-400">{log.client_name || log.client_ip}</td>
+                <td className={`px-5 py-3 text-sm font-medium ${log.action === 'BLOCK' ? 'text-red-400' : 'text-emerald-400'}`}>{log.action}</td>
               </tr>
             ))}
+            {!logs.length && <tr><td colSpan={4} className="px-5 py-10 text-center text-slate-500">No query records returned.</td></tr>}
           </tbody>
         </table>
       </div>
