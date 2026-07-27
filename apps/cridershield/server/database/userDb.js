@@ -2,7 +2,7 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
 
-const dataDir = path.join(__dirname, '../../data');
+const dataDir = process.env.CRIDER_DATA_DIR || path.join(__dirname, '../../data');
 if (!fs.existsSync(dataDir)) { fs.mkdirSync(dataDir, { recursive: true }); }
 const db = new sqlite3.Database(path.join(dataDir, 'users.db'));
 db.serialize(() => {
