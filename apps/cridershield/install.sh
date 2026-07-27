@@ -20,8 +20,13 @@ stage_root=""
 sudoers_tmp=""
 
 cleanup() {
-  [[ -n "${stage_root}" && -d "${stage_root}" ]] && rm -rf -- "${stage_root}"
-  [[ -n "${sudoers_tmp}" && -e "${sudoers_tmp}" ]] && rm -f -- "${sudoers_tmp}"
+  if [[ -n "${stage_root}" && -d "${stage_root}" ]]; then
+    rm -rf -- "${stage_root}"
+  fi
+  if [[ -n "${sudoers_tmp}" && -e "${sudoers_tmp}" ]]; then
+    rm -f -- "${sudoers_tmp}"
+  fi
+  return 0
 }
 trap cleanup EXIT
 
