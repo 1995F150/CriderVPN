@@ -11,9 +11,9 @@ export default function AnalyticsPage() {
   const [range, setRange] = useState('-24 hours');
 
   useEffect(() => {
-    fetch(`http://localhost:3000/api/v1/analytics/overview?range=${range}`).then(r => r.json()).then(setOverview);
-    fetch(`http://localhost:3000/api/v1/analytics/trend?range=${range}`).then(r => r.json()).then(setTrend);
-    fetch(`http://localhost:3000/api/v1/analytics/top-domains?range=${range}`).then(r => r.json()).then(setTopDomains);
+    fetch(`/api/v1/analytics/overview?range=${range}`).then(r => r.json()).then(setOverview);
+    fetch(`/api/v1/analytics/trend?range=${range}`).then(r => r.json()).then(setTrend);
+    fetch(`/api/v1/analytics/top-domains?range=${range}`).then(r => r.json()).then(setTopDomains);
   }, [range]);
 
   return (
