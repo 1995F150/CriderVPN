@@ -43,12 +43,23 @@ chown -R root:root "${install_root}"
 if [[ ! -e "${config_root}/cridershield.env" ]]; then
   jwt_secret="$(openssl rand -hex 32)"
   install -m 0600 /dev/null "${config_root}/cridershield.env"
-  printf 'JWT_SECRET=%s\n' "${jwt_secret}" > "${config_root}/cridershield.env"
+  {
+    printf 'JWT_SECRET=%s\n' "${jwt_secret}"
+    printf 'PIHOLE_URL=http://127.0.0.1\n'
+    printf 'PIHOLE_APP_PASSWORD=\n'
+  } > "${config_root}/cridershield.env"
 fi
+grep -q '^PIHOLE_URL=' "${config_root}/cridershield.env" ||
+  printf 'PIHOLE_URL=http://127.0.0.1\n' >> "${config_root}/cridershield.env"
+grep -q '^PIHOLE_APP_PASSWORD=' "${config_root}/cridershield.env" ||
+  printf 'PIHOLE_APP_PASSWORD=\n' >> "${config_root}/cridershield.env"
+chmod 0600 "${config_root}/cridershield.env"
 
 install -m 0644 "${install_root}/cridershield.service" /etc/systemd/system/cridershield.service
 systemctl daemon-reload
 systemctl enable --now cridershield.service
 
 echo "CriderShield installed safely on port 3000."
-echo "Embedded DNS remains disabled so Pi-hole keeps ports 53, 80 and 443."
+echo "Pi-hole keeps ports 53, 80 and 443."
+echo "To enable live DNS data and rule changes, set a Pi-hole application password in:"
+echo "  /etc/cridervpn/cridershield.env"
