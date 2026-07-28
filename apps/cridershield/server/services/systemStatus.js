@@ -16,8 +16,62 @@ const serviceState = async (name) => {
   return ['active', 'inactive', 'failed', 'activating', 'deactivating'].includes(state) ? state : 'unavailable';
 };
 
+const checkJsonEndpoint = async (url, timeout = 5000) => {
+  const started = Date.now();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
+
+  try {
+    const response = await fetch(url, {
+      headers: { accept: 'application/json' },
+      signal: controller.signal,
+      cache: 'no-store'
+    });
+    let body = {};
+    try {
+      body = await response.json();
+    } catch {}
+
+    return {
+      url,
+      reachable: response.ok,
+      httpStatus: response.status,
+      latencyMs: Date.now() - started,
+      status: body.status || (response.ok ? 'reachable' : 'error'),
+      ready: Boolean(body.ready),
+      version: body.version || null,
+      dependencies: body.dependencies || {},
+      capabilities: Array.isArray(body.capabilities) ? body.capabilities : [],
+      error: response.ok ? null : `HTTP ${response.status}`
+    };
+  } catch (error) {
+    return {
+      url,
+      reachable: false,
+      httpStatus: null,
+      latencyMs: Date.now() - started,
+      status: 'unreachable',
+      ready: false,
+      version: null,
+      dependencies: {},
+      capabilities: [],
+      error: error.name === 'AbortError' ? 'Request timed out' : error.message
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
 const collect = async () => {
-  const names = ['pihole-FTL', 'tailscaled', 'squid', 'danted', 'cridershield'];
+  const names = [
+    'pihole-FTL',
+    'tailscaled',
+    'squid',
+    'danted',
+    'cridershield',
+    'cridergpt-engine',
+    'cridergpt-video-worker'
+  ];
   const states = await Promise.all(names.map(serviceState));
   const services = Object.fromEntries(names.map((name, index) => [name, states[index]]));
 
@@ -37,6 +91,10 @@ const collect = async () => {
     }
   }
 
+  const engineHealthUrl = process.env.CRIDERGPT_ENGINE_HEALTH_URL ||
+    'https://cridergpt.com/engine/api/health';
+  const cridergptEngine = await checkJsonEndpoint(engineHealthUrl);
+
   return {
     services,
     tailscale,
@@ -44,8 +102,13 @@ const collect = async () => {
       http: services.squid === 'active',
       socks5: services.danted === 'active'
     },
+    cridergptEngine: {
+      ...cridergptEngine,
+      localService: services['cridergpt-engine'],
+      videoWorker: services['cridergpt-video-worker']
+    },
     checkedAt: new Date().toISOString()
   };
 };
 
-module.exports = { collect };
+module.exports = { collect, checkJsonEndpoint };
