@@ -6,9 +6,13 @@ const path = require('path');
 process.env.CRIDER_DATA_DIR = path.join(os.tmpdir(), `cridershield-scanner-test-${process.pid}`);
 const scanner = require('./scanner');
 
-test('normalizes valid MAC addresses and rejects invalid values', () => {
+test('normalizes valid unicast MAC addresses and rejects unusable identities', () => {
   assert.equal(scanner.normalizeMac('AA-BB-CC-DD-EE-FF'), 'aa:bb:cc:dd:ee:ff');
+  assert.equal(scanner.normalizeMac('c2:5e:87:c4:73:aa'), 'c2:5e:87:c4:73:aa');
   assert.equal(scanner.normalizeMac('not-a-mac'), '');
+  assert.equal(scanner.normalizeMac('00:00:00:00:00:00'), '');
+  assert.equal(scanner.normalizeMac('ff:ff:ff:ff:ff:ff'), '');
+  assert.equal(scanner.normalizeMac('01:00:5e:00:00:fb'), '');
 });
 
 test('classifies Linux interface names into connection types', () => {
