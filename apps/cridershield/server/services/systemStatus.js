@@ -39,9 +39,9 @@ const checkJsonEndpoint = async (url, timeout = 5000) => {
       latencyMs: Date.now() - started,
       status: body.status || (response.ok ? 'reachable' : 'error'),
       ready: Boolean(body.ready),
-      version: body.version || null,
+      version: body.engine_version || body.version || null,
       dependencies: body.dependencies || {},
-      capabilities: Array.isArray(body.capabilities) ? body.capabilities : [],
+      capabilities: body.capabilities || {},
       error: response.ok ? null : `HTTP ${response.status}`
     };
   } catch (error) {
@@ -54,7 +54,7 @@ const checkJsonEndpoint = async (url, timeout = 5000) => {
       ready: false,
       version: null,
       dependencies: {},
-      capabilities: [],
+      capabilities: {},
       error: error.name === 'AbortError' ? 'Request timed out' : error.message
     };
   } finally {
@@ -91,9 +91,15 @@ const collect = async () => {
     }
   }
 
-  const engineHealthUrl = process.env.CRIDERGPT_ENGINE_HEALTH_URL ||
+  const localHealthUrl = process.env.CRIDERGPT_ENGINE_LOCAL_HEALTH_URL ||
+    'http://127.0.0.1:8000/api/health';
+  const publicHealthUrl = process.env.CRIDERGPT_ENGINE_PUBLIC_HEALTH_URL ||
+    process.env.CRIDERGPT_ENGINE_HEALTH_URL ||
     'https://cridergpt.com/engine/api/health';
-  const cridergptEngine = await checkJsonEndpoint(engineHealthUrl);
+  const [localHealth, publicHealth] = await Promise.all([
+    checkJsonEndpoint(localHealthUrl),
+    checkJsonEndpoint(publicHealthUrl)
+  ]);
 
   return {
     services,
@@ -103,9 +109,11 @@ const collect = async () => {
       socks5: services.danted === 'active'
     },
     cridergptEngine: {
-      ...cridergptEngine,
+      local: localHealth,
+      publicProxy: publicHealth,
       localService: services['cridergpt-engine'],
-      videoWorker: services['cridergpt-video-worker']
+      videoWorker: services['cridergpt-video-worker'],
+      healthy: localHealth.reachable && localHealth.ready
     },
     checkedAt: new Date().toISOString()
   };

@@ -3,6 +3,19 @@
 import { useEffect, useState } from 'react';
 import { CircleCheck, CircleX, RefreshCw } from 'lucide-react';
 
+type EndpointHealth = {
+  url: string;
+  reachable: boolean;
+  httpStatus: number | null;
+  latencyMs: number;
+  status: string;
+  ready: boolean;
+  version: string | null;
+  dependencies: Record<string, boolean | string | object>;
+  capabilities: Record<string, boolean> | string[];
+  error: string | null;
+};
+
 type SystemData = {
   services: Record<string, string>;
   tailscale: {
@@ -13,23 +26,21 @@ type SystemData = {
   };
   proxy: { http: boolean; socks5: boolean };
   cridergptEngine: {
-    url: string;
-    reachable: boolean;
-    httpStatus: number | null;
-    latencyMs: number;
-    status: string;
-    ready: boolean;
-    version: string | null;
+    local: EndpointHealth;
+    publicProxy: EndpointHealth;
     localService: string;
     videoWorker: string;
-    dependencies: Record<string, boolean | string>;
-    capabilities: string[];
-    error: string | null;
+    healthy: boolean;
   };
   integrations: {
     pihole: { url: string; credentialConfigured: boolean };
   };
   checkedAt: string;
+};
+
+const endpointState = (endpoint: EndpointHealth) => {
+  if (!endpoint.reachable) return 'Unreachable';
+  return endpoint.ready ? 'Healthy' : 'Degraded';
 };
 
 export default function SystemPage() {
@@ -57,7 +68,7 @@ export default function SystemPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">System & Integrations</h1>
-          <p className="text-sm text-slate-400">Live state from systemd, Tailscale, proxies, Pi-hole and the CriderGPT Engine reverse proxy.</p>
+          <p className="text-sm text-slate-400">Independent local Engine and public reverse-proxy health, plus systemd, Tailscale, proxies and Pi-hole.</p>
         </div>
         <button onClick={load} className="rounded-lg border border-slate-700 p-2 hover:bg-slate-800" aria-label="Refresh">
           <RefreshCw className="h-4 w-4" />
@@ -108,48 +119,58 @@ export default function SystemPage() {
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h2 className="font-semibold">CriderGPT Engine</h2>
-                <a
-                  href={data.cridergptEngine.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-1 block break-all text-sm text-blue-400 hover:text-blue-300"
-                >
-                  {data.cridergptEngine.url}
-                </a>
+                <p className="mt-1 text-sm text-slate-400">Local service health is independent from public reverse-proxy availability.</p>
               </div>
               <div className={`rounded-full border px-3 py-1 text-xs ${
-                data.cridergptEngine.reachable && data.cridergptEngine.ready
+                data.cridergptEngine.healthy
                   ? 'border-emerald-700 bg-emerald-950/50 text-emerald-300'
                   : 'border-amber-700 bg-amber-950/50 text-amber-300'
               }`}>
-                {data.cridergptEngine.reachable
-                  ? (data.cridergptEngine.ready ? 'Healthy' : 'Degraded')
-                  : 'Unreachable'}
+                {data.cridergptEngine.healthy ? 'Engine Healthy' : 'Engine Unhealthy'}
               </div>
             </div>
 
+            <div className="mt-5 grid gap-4 lg:grid-cols-2">
+              {[
+                ['Local Engine', data.cridergptEngine.local],
+                ['Public Reverse Proxy', data.cridergptEngine.publicProxy]
+              ].map(([label, endpoint]) => {
+                const health = endpoint as EndpointHealth;
+                return (
+                  <div key={label as string} className="rounded-lg border border-slate-800 bg-slate-950/40 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <h3 className="font-medium">{label as string}</h3>
+                      <span className={health.reachable && health.ready ? 'text-emerald-300' : 'text-amber-300'}>
+                        {endpointState(health)}
+                      </span>
+                    </div>
+                    <a href={health.url} target="_blank" rel="noreferrer" className="mt-1 block break-all text-xs text-blue-400 hover:text-blue-300">
+                      {health.url}
+                    </a>
+                    <dl className="mt-4 space-y-2 text-sm">
+                      <div className="flex justify-between gap-4"><dt className="text-slate-400">HTTP status</dt><dd>{health.httpStatus ?? 'Unavailable'}</dd></div>
+                      <div className="flex justify-between gap-4"><dt className="text-slate-400">Response time</dt><dd>{health.latencyMs} ms</dd></div>
+                      <div className="flex justify-between gap-4"><dt className="text-slate-400">Readiness</dt><dd>{health.ready ? 'Ready' : 'Not confirmed'}</dd></div>
+                      {health.version && <div className="flex justify-between gap-4"><dt className="text-slate-400">Version</dt><dd>{health.version}</dd></div>}
+                      {health.error && <div className="flex justify-between gap-4 text-amber-300"><dt>Error</dt><dd>{health.error}</dd></div>}
+                    </dl>
+                  </div>
+                );
+              })}
+            </div>
+
             <dl className="mt-5 grid gap-x-8 gap-y-3 text-sm md:grid-cols-2">
-              <div className="flex justify-between gap-4"><dt className="text-slate-400">Reverse proxy</dt><dd>{data.cridergptEngine.reachable ? 'Online' : 'Offline'}</dd></div>
-              <div className="flex justify-between gap-4"><dt className="text-slate-400">HTTP status</dt><dd>{data.cridergptEngine.httpStatus ?? 'Unavailable'}</dd></div>
-              <div className="flex justify-between gap-4"><dt className="text-slate-400">Response time</dt><dd>{data.cridergptEngine.latencyMs} ms</dd></div>
-              <div className="flex justify-between gap-4"><dt className="text-slate-400">Engine readiness</dt><dd>{data.cridergptEngine.ready ? 'Ready' : 'Not ready'}</dd></div>
               <div className="flex justify-between gap-4"><dt className="text-slate-400">Local engine service</dt><dd>{data.cridergptEngine.localService}</dd></div>
               <div className="flex justify-between gap-4"><dt className="text-slate-400">Video worker</dt><dd>{data.cridergptEngine.videoWorker}</dd></div>
-              {data.cridergptEngine.version && (
-                <div className="flex justify-between gap-4"><dt className="text-slate-400">Version</dt><dd>{data.cridergptEngine.version}</dd></div>
-              )}
-              {data.cridergptEngine.error && (
-                <div className="flex justify-between gap-4 text-amber-300"><dt>Error</dt><dd>{data.cridergptEngine.error}</dd></div>
-              )}
             </dl>
 
-            {Object.keys(data.cridergptEngine.dependencies).length > 0 && (
+            {Object.keys(data.cridergptEngine.local.dependencies).length > 0 && (
               <div className="mt-5">
-                <h3 className="text-sm font-medium text-slate-300">Dependencies</h3>
+                <h3 className="text-sm font-medium text-slate-300">Local Engine dependencies</h3>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {Object.entries(data.cridergptEngine.dependencies).map(([name, value]) => (
+                  {Object.entries(data.cridergptEngine.local.dependencies).map(([name, value]) => (
                     <span key={name} className="rounded-full border border-slate-700 px-3 py-1 text-xs text-slate-300">
-                      {name}: {typeof value === 'boolean' ? (value ? 'Ready' : 'Unavailable') : String(value)}
+                      {name}: {typeof value === 'boolean' ? (value ? 'Ready' : 'Unavailable') : typeof value === 'object' ? JSON.stringify(value) : String(value)}
                     </span>
                   ))}
                 </div>
