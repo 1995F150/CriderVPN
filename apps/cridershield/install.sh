@@ -76,6 +76,8 @@ grep -q '^PIHOLE_URL=' "${env_file}" ||
   printf 'PIHOLE_URL=http://127.0.0.1\n' >> "${env_file}"
 grep -q '^PIHOLE_APP_PASSWORD=' "${env_file}" ||
   printf 'PIHOLE_APP_PASSWORD=\n' >> "${env_file}"
+grep -q '^CRIDERGPT_ENGINE_HEALTH_URL=' "${env_file}" ||
+  printf 'CRIDERGPT_ENGINE_HEALTH_URL=https://cridergpt.com/engine/api/health\n' >> "${env_file}"
 chown root:root "${env_file}"
 chmod 0600 "${env_file}"
 
