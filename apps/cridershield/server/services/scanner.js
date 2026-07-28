@@ -33,7 +33,11 @@ const run = (name, args, timeout = 2500) => new Promise(resolve => {
 
 const normalizeMac = value => {
   const compact = String(value || '').trim().toLowerCase().replace(/-/g, ':');
-  return /^([0-9a-f]{2}:){5}[0-9a-f]{2}$/.test(compact) ? compact : '';
+  if (!/^([0-9a-f]{2}:){5}[0-9a-f]{2}$/.test(compact)) return '';
+  if (compact === '00:00:00:00:00:00' || compact === 'ff:ff:ff:ff:ff:ff') return '';
+  // Group/multicast addresses cannot identify an individual client. Locally
+  // administered unicast addresses remain valid for privacy-randomized devices.
+  return (Number.parseInt(compact.slice(0, 2), 16) & 1) === 0 ? compact : '';
 };
 
 const isUsableIp = ip => Boolean(ip) && ip !== '0.0.0.0' && ip !== '::' && !String(ip).startsWith('fe80::');
@@ -215,10 +219,11 @@ const collectNeighbors = async records => {
     const macIndex = fields.indexOf('lladdr');
     if (!fields[0] || macIndex < 0) continue;
     const state = fields.at(-1);
-    if (state === 'FAILED' || state === 'INCOMPLETE') continue;
+    const mac = normalizeMac(fields[macIndex + 1]);
+    if (state === 'FAILED' || state === 'INCOMPLETE' || !mac) continue;
     addEvidence(records, {
       ip_address: fields[0],
-      mac_address: fields[macIndex + 1],
+      mac_address: mac,
       interface_name: fields[fields.indexOf('dev') + 1],
       connection_type: connectionFromInterface(fields[fields.indexOf('dev') + 1]),
       status: state === 'STALE' || state === 'DELAY' ? 'Idle' : 'Online',
@@ -231,9 +236,12 @@ const collectNeighbors = async records => {
     for (const line of fs.readFileSync('/proc/net/arp', 'utf8').split('\n').slice(1)) {
       const fields = line.trim().split(/\s+/);
       if (fields.length < 6) continue;
+      const flags = Number.parseInt(fields[2], 16);
+      const mac = normalizeMac(fields[3]);
+      if (!mac || !Number.isFinite(flags) || (flags & 0x2) === 0) continue;
       addEvidence(records, {
         ip_address: fields[0],
-        mac_address: fields[3],
+        mac_address: mac,
         interface_name: fields[5],
         connection_type: connectionFromInterface(fields[5]),
         confidence: 20
@@ -244,9 +252,10 @@ const collectNeighbors = async records => {
   output = await run('arp', ['-an']);
   for (const line of output.split('\n')) {
     const match = line.match(/\(([^)]+)\) at ([0-9a-f:]{17}).* on (\S+)/i);
-    if (match) addEvidence(records, {
+    const mac = normalizeMac(match?.[2]);
+    if (match && mac) addEvidence(records, {
       ip_address: match[1],
-      mac_address: match[2],
+      mac_address: mac,
       interface_name: match[3],
       connection_type: connectionFromInterface(match[3]),
       confidence: 16
@@ -476,10 +485,15 @@ const persist = device => new Promise((resolve, reject) => {
   deviceDb.upsertDevice(device, error => error ? reject(error) : resolve());
 });
 
+const purgeInvalidDiscoveryRecords = () => new Promise((resolve, reject) => {
+  deviceDb.purgeInvalidDiscoveryRecords(error => error ? reject(error) : resolve());
+});
+
 const scan = async () => {
   if (runningScan) return runningScan;
   runningScan = (async () => {
     lastScan = { ...lastScan, running: true, startedAt: new Date().toISOString() };
+    await purgeInvalidDiscoveryRecords();
     const records = new Map();
     const sources = [];
 
