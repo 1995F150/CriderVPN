@@ -1,3 +1,4 @@
+const http = require('http');
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const next = require('next');
@@ -11,6 +12,8 @@ const devicesRoutes = require('./routes/devices');
 const rulesRoutes = require('./routes/rules');
 const scanner = require('./services/scanner');
 const systemRoutes = require('./routes/system');
+const proxyDiagnosticsRoutes = require('./routes/proxyDiagnostics');
+const engineProxy = require('./services/engineProxy');
 const accessControl = require('./services/accessControl');
 
 const dev = process.env.NODE_ENV !== 'production';
@@ -26,10 +29,15 @@ if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
 nextApp.prepare().then(() => {
   const app = express();
 
+  app.set('trust proxy', 'loopback');
+
+  // Proxy before body parsers. This preserves request bodies and content
+  // encodings exactly, including streamed POST requests.
+  app.use(engineProxy.middleware);
+
   app.use(express.json());
   app.use(cookieParser());
 
-  app.set('trust proxy', 'loopback');
   app.use('/api/auth', authRouter);
   app.use('/api/v1', auth());
   app.use('/api/v1/telemetry', telemetryRouter);
@@ -39,6 +47,7 @@ nextApp.prepare().then(() => {
   app.use('/api/v1/rules', rulesRoutes);
   app.use('/api/v1/analytics', require('./routes/analytics'));
   app.use('/api/v1/system', systemRoutes);
+  app.use('/api/v1/proxy', proxyDiagnosticsRoutes);
 
   app.get('/api/v1/status', (req, res) => {
     res.json({ status: 'running' });
@@ -48,8 +57,17 @@ nextApp.prepare().then(() => {
     return handle(req, res);
   });
 
-  app.listen(PORT, () => {
+  const server = http.createServer(app);
+  server.on('upgrade', (req, socket, head) => {
+    if (!engineProxy.proxyWebSocket(req, socket, head)) {
+      socket.destroy();
+    }
+  });
+
+  server.listen(PORT, () => {
     console.log(`CriderShield running on port ${PORT}`);
+    console.log(`CriderGPT Engine proxy target: ${engineProxy.diagnostics().upstream}`);
+    engineProxy.startHealthMonitor();
     accessControl.restoreBlockedDevices();
 
     if (process.env.SCANNER_ENABLED !== 'false') {

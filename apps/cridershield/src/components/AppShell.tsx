@@ -10,6 +10,7 @@ import {
   LogOut,
   Monitor,
   Network,
+  Route,
   ServerCog,
   Shield
 } from 'lucide-react';
@@ -21,6 +22,7 @@ const links = [
   { href: '/clients', label: 'Clients', icon: Monitor },
   { href: '/rules', label: 'Allow & Block', icon: ListFilter },
   { href: '/analytics', label: 'Analytics', icon: ChartNoAxesCombined },
+  { href: '/proxy', label: 'Reverse Proxy', icon: Route },
   { href: '/system', label: 'System', icon: ServerCog }
 ];
 
