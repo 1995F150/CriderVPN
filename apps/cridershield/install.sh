@@ -76,8 +76,13 @@ grep -q '^PIHOLE_URL=' "${env_file}" ||
   printf 'PIHOLE_URL=http://127.0.0.1\n' >> "${env_file}"
 grep -q '^PIHOLE_APP_PASSWORD=' "${env_file}" ||
   printf 'PIHOLE_APP_PASSWORD=\n' >> "${env_file}"
-grep -q '^CRIDERGPT_ENGINE_HEALTH_URL=' "${env_file}" ||
-  printf 'CRIDERGPT_ENGINE_HEALTH_URL=https://cridergpt.com/engine/api/health\n' >> "${env_file}"
+grep -q '^CRIDERGPT_ENGINE_LOCAL_HEALTH_URL=' "${env_file}" ||
+  printf 'CRIDERGPT_ENGINE_LOCAL_HEALTH_URL=http://127.0.0.1:8000/api/health\n' >> "${env_file}"
+if ! grep -q '^CRIDERGPT_ENGINE_PUBLIC_HEALTH_URL=' "${env_file}"; then
+  legacy_public_url="$(sed -n 's/^CRIDERGPT_ENGINE_HEALTH_URL=//p' "${env_file}" | tail -n 1)"
+  printf 'CRIDERGPT_ENGINE_PUBLIC_HEALTH_URL=%s\n' \
+    "${legacy_public_url:-https://cridergpt.com/engine/api/health}" >> "${env_file}"
+fi
 chown root:root "${env_file}"
 chmod 0600 "${env_file}"
 
