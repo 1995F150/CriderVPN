@@ -205,6 +205,17 @@ const getBlockedDevices = (callback) => db.all(
   callback
 );
 
+const purgeInvalidDiscoveryRecords = (callback = () => {}) => {
+  const invalidMacs = ['00:00:00:00:00:00', 'ff:ff:ff:ff:ff:ff'];
+  const placeholders = invalidMacs.map(() => '?').join(', ');
+
+  db.serialize(() => {
+    db.run(`DELETE FROM device_history WHERE mac_address IN (${placeholders})`, invalidMacs);
+    db.run(`DELETE FROM device_events WHERE mac_address IN (${placeholders})`, invalidMacs);
+    db.run(`DELETE FROM devices WHERE mac_address IN (${placeholders})`, invalidMacs, callback);
+  });
+};
+
 const updateDevice = (mac, data, callback) => {
   db.run(
     `UPDATE devices SET
@@ -252,6 +263,7 @@ module.exports = {
   getDevice,
   setInternetBlocked,
   getBlockedDevices,
+  purgeInvalidDiscoveryRecords,
   updateDevice,
   getHistory,
   getEvents,
